@@ -38,18 +38,18 @@ function svn
 	then
 		eval $(which svn) $CMD | while IFS= read -r RL
 		do
-			if   [[ $RL =~ ^\ ?M ]]; then C="\033[34m";
-			elif [[ $RL =~ ^\ ?C ]]; then C="\033[41m\033[37m\033[1m";
-			elif [[ $RL =~ ^A ]]; then C="\033[32m\033[1m";
-			elif [[ $RL =~ ^D ]]; then C="\033[31m\033[1m";
-			elif [[ $RL =~ ^X ]]; then C="\033[37m";
-			elif [[ $RL =~ ^! ]]; then C="\033[43m\033[37m\033[1m";
-			elif [[ $RL =~ ^I ]]; then C="\033[33m";
-			elif [[ $RL =~ ^R ]]; then C="\033[35m";
+			if   [[ $RL =~ ^\ ?M|^\ ?U ]];       then C="\e[38;5;38m";           # Modified/Updated   = Blue
+			elif [[ $RL =~ ^\ ?C|^E ]];          then C="\e[48;5;1m\e[38;5;7m";  # Conflicted/Existed = Red Alert
+			elif [[ $RL =~ ^A ]];                then C="\e[38;5;2m";            # Added              = Green
+			elif [[ $RL =~ ^D ]];                then C="\e[38;5;1m";            # Deleted            = Red
+			elif [[ $RL =~ ^! ]];                then C="\e[48;5;94m\e[38;5;7m"; # Item Missing       = Amber Alert
+			elif [[ $RL =~ ^R|^G ]];             then C="\e[38;5;5m";            # Replaced or Merged = Purple
+			elif [[ $RL =~ ^\? ]];               then C="\e[38;5;242m";          # No Version Control = Light Grey
+			elif [[ $RL =~ ^I|^X|^Performing ]]; then C="\e[38;5;236m";          # Ignored            = Dark Grey
 			else C=
 			fi
 
-			echo -e "$C${RL/\\/\\\\}\033[0m\033[0;0m"
+			echo -e "$C${RL/\\/\\\\}\e[0m\e[0;0m"                                # Background and Text Reset
 		done
 
 	# actions that outputs "diff-like" data
@@ -57,25 +57,13 @@ function svn
 	then
 		eval $(which svn) $CMD | while IFS= read -r RL
 		do
-			if   [[ $RL =~ ^Index:\  ]]; then C="\033[34m\033[1m";
-			elif [[ $RL =~ ^@@ ]]; then C="\033[37m";
-
-			# removed
-			elif [[ $RL =~ ^-\<\<\< ]]; then C="\033[31m\033[1m";
-			elif [[ $RL =~ ^-\>\>\> ]]; then C="\033[31m\033[1m";
-			elif [[ $RL =~ ^-=== ]]; then C="\033[31m\033[1m";
-			elif [[ $RL =~ ^- ]]; then C="\033[31m";
-
-			# added
-			elif [[ $RL =~ ^\+\<\<\< ]]; then C="\033[32m\033[1m";
-			elif [[ $RL =~ ^\+\>\>\> ]]; then C="\033[32m\033[1m";
-			elif [[ $RL =~ ^\+=== ]]; then C="\033[32m\033[1m";
-			elif [[ $RL =~ ^\+ ]]; then C="\033[32m";
-
+			if   [[ $RL =~ ^Index:\ |^@@|^= ]];  then C="\e[38;5;38m";           # File Name    = Blue
+			elif [[ $RL =~ ^- ]];                then C="\e[38;5;1m";            # Removed      = Red
+			elif [[ $RL =~ ^\+ ]];               then C="\e[38;5;2m";            # Added        = Green
 			else C=
 			fi
 
-			echo -e "$C${RL/\\/\\\\}\033[0m\033[0;0m"
+			echo -e "$C${RL/\\/\\\\}\e[0m\e[0;0m"                                # Background and Text Reset
 		done
 	else
 		eval $(which svn) $CMD
