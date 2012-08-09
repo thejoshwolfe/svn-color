@@ -5,7 +5,7 @@ function svn
 
   if [[ "$1" =~ ^($ACTIONS) ]]
   then
-    eval $(which svn) "$@" | while IFS= read -r RL
+    $(which svn) "$@" | while IFS= read -r RL
     do
       if   [[ $RL =~ ^Index:\ |^@@|^= ]];  then C="\e[38;5;38m";           # File Name          = Blue
       elif [[ $RL =~ ^- ]];                then C="\e[38;5;1m";            # Removed            = Red
@@ -24,6 +24,6 @@ function svn
       echo -e "$C${RL/\\/\\\\}\e[0m\e[0;0m"                                # Background and Text Reset
     done
   else
-    eval $(which svn) "$@"
+    $(which svn) "$@"
   fi
 }
