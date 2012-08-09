@@ -23,7 +23,7 @@ function svn
 
   # check if disabled
   test "$CMDLEN" = "${#CMD}"
-  if [ $? = 1 ] || [ ! -t 1 ]
+  if [ $? = 1 ]
   then
     eval $(which svn) $CMD
     return
