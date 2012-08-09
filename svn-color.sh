@@ -1,41 +1,11 @@
-#!/bin/bash
-
 function svn
 {
-  # rebuild args to get quotes right
-  CMD=
-  for i in "$@"
-  do
-    if [[ "$i" =~ \  ]]
-    then
-      CMD="$CMD \"$i\""
-    else
-      CMD="$CMD $i"
-    fi
-  done
-
-  # pad with spaces to strip --nocol
-  CMD=" $CMD "
-  CMDLEN=${#CMD}
-
-  # parse disabling arg
-  CMD="${CMD/ --nocol / }"
-
-  # check if disabled
-  test "$CMDLEN" = "${#CMD}"
-  if [ $? = 1 ]
-  then
-    eval $(which svn) $CMD
-    return
-  fi
-
-  # supported svn actions for "status-like" output
+  # Supported svn actions
   ACTIONS="add|checkout|co|cp|del|diff|export|merge|mkdir|move|mv|remove|rm|ren|st|sw|up"
 
-  # actions that outputs "status-like" data
   if [[ "$1" =~ ^($ACTIONS) ]]
   then
-    eval $(which svn) $CMD | while IFS= read -r RL
+    eval $(which svn) "$@" | while IFS= read -r RL
     do
       if   [[ $RL =~ ^Index:\ |^@@|^= ]];  then C="\e[38;5;38m";           # File Name          = Blue
       elif [[ $RL =~ ^- ]];                then C="\e[38;5;1m";            # Removed            = Red
@@ -54,6 +24,6 @@ function svn
       echo -e "$C${RL/\\/\\\\}\e[0m\e[0;0m"                                # Background and Text Reset
     done
   else
-    eval $(which svn) $CMD
+    eval $(which svn) "$@"
   fi
 }
