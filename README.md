@@ -79,7 +79,7 @@ Before:
 
 After:
 
-    $ svn st
+    $ svn up
 
 Before:
 
