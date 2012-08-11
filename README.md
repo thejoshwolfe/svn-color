@@ -72,7 +72,7 @@ Before:
     $ svn up
     Updating '.':
     
-    Fetching external item into 'openarborCommon':
+    Fetching external item into 'external_item':
     External at revision 1234.
     
     At revision 5678.
@@ -86,7 +86,7 @@ Before:
     $ svn up
     Updating '.':
     
-    Fetching external item into 'openarborCommon':
+    Fetching external item into 'external_item':
     U       external_item/new_file
     External at revision 1234.
     
@@ -96,6 +96,6 @@ After:
 
     $ svn up
     
-    Fetching external item into 'openarborCommon':
+    Fetching external item into 'external_item':
     U       external_item/new_file
 
