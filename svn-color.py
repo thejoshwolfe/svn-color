@@ -125,6 +125,18 @@ def decorate(line, formatting_list):
 
     return line
 
+def contains_accept_edit(args):
+    # look for --accept edit
+    accept = "--accept"
+    edit_names = ("e", "edit")
+    if any(accept + "=" + edit_name in args for edit_name in edit_names):
+        return True
+    try: accept_index = args.index(accept)
+    except ValueError: return False
+    try: return args[accept_index+1] in edit_names
+    except IndexError: return False
+
+commands_that_can_use_an_external_editor = "commit ci copy cp delete del remove rm import mkdir move mv rename ren propedit pedit pe update up".split()
 commands_to_hide_stuff_from = "st status up update".split()
 status_like_commands = "add checkout co cp del export merge mkdir move mv remove rm ren sw".split() + commands_to_hide_stuff_from
 def main(args):
@@ -140,7 +152,18 @@ def main(args):
             formatting_list = hide_stuff_formatting + formatting_list
     if command == "diff":
         formatting_list = diff_formatting
-    process = subprocess.Popen(["svn"] + args, stdout=subprocess.PIPE)
+    subprocess_command = ["svn"] + args
+    accept_edit = contains_accept_edit(args)
+    if command in commands_that_can_use_an_external_editor or accept_edit:
+        # figuring out exactly when svn will run vim is too hard.
+        # if the user doesn't explicitly ask for the editor, don't allow it.
+        if accept_edit or "--editor-cmd" in args:
+            # stay out of the way
+            return subprocess.call(subprocess_command)
+        # no editor allowed
+        subprocess_command.append("--non-interactive")
+
+    process = subprocess.Popen(subprocess_command, stdout=subprocess.PIPE)
     for input_line in lazy_lines(process.stdout):
         output_line = decorate(input_line, formatting_list)
         if output_line == None:
@@ -150,10 +173,10 @@ def main(args):
             print(context)
             context = None
         print(output_line)
-    sys.exit(process.wait())
+    return process.wait()
 
 try:
-    main(sys.argv[1:])
+    sys.exit(main(sys.argv[1:]))
 except KeyboardInterrupt:
     sys.exit("")
 
