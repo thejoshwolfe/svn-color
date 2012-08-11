@@ -9,43 +9,151 @@ def lazy_lines(file_object):
         c = file_object.read(1)
         if c == "":
             return
-        line_builder.append(c)
         if c == "\n":
             yield "".join(line_builder)
             del line_builder[:]
+        else:
+            line_builder.append(c)
 
-def color(line, foreground=None, background=None):
+red         = "1"
+green       = "2"
+purple      = "5"
+white       = "7"
+blue        = "38"
+amber       = "94"
+gray        = "242"
+red_alert   = lambda line: apply_color(line, white, red)
+amber_alert = lambda line: apply_color(line, white, amber)
+
+def apply_color(text, foreground=None, background=None):
     prefixes = []
     if background:
         prefixes.append("\x1b[48;5;" + background + "m")
     if foreground:
         prefixes.append("\x1b[38;5;" + foreground + "m")
-    if prefixes:
-        line = "".join(prefixes) + line + "\x1b[0m\x1b[0;0m"
+    return "".join(prefixes) + text + "\x1b[0m\x1b[0;0m"
+
+diff_metadata_color = blue
+diff_currently_in_metadata = False
+def make_diff_metadata_control(is_start):
+    def diff_metadata_control(line):
+        global diff_currently_in_metadata; diff_currently_in_metadata = is_start
+        return apply_color(line, diff_metadata_color)
+    return diff_metadata_control
+diff_metadata_start = make_diff_metadata_control(True)
+diff_metadata_end = make_diff_metadata_control(False)
+def make_diff_normal(color):
+    def diff_normal(line):
+        if diff_currently_in_metadata:
+            return apply_color(line, diff_metadata_color)
+        if color:
+            return apply_color(line, color)
+        return line
+    return diff_normal
+diff_add = make_diff_normal(green)
+diff_delete = make_diff_normal(red)
+diff_unknown = make_diff_normal(None)
+
+diff_formatting = [
+    (r"^Index: ", diff_metadata_start),
+    (r"^@@",      diff_metadata_end),
+    (r"^\+",      diff_add),
+    (r"^-",       diff_delete),
+    (r"",         diff_unknown),
+]
+def summary_of_conflicts(line):
+    # the final summary is not in any context
+    global context; context = None
+    return red_alert(line)
+status_formatting = [
+    (r"^..L",                     amber_alert), # Locked
+    (r"^Summary of conflicts:$",  summary_of_conflicts),
+    (r"^E|^C|^.C|^...C|^......C", red_alert),   # Conflicted/Existed
+    (r"^.       \*",              amber),       # Modified Remotely
+    (r"^ ?M|^ ?U",                blue),        # Modified/Updated
+    (r"^A|^   A",                 green),       # Added
+    (r"^D|Removed external '.+'", red),         # Deleted
+    (r"^R|^G",                    purple),      # Replaced or Merged
+    (r"^\?|^I",                   gray),        # No Version Control/Ignored
+    (r"^!",                       amber_alert), # Item Missing
+]
+
+update_stack = []
+def set_context():
+    if update_stack:
+        global context; context = update_stack[-1]
+def updating_start(line):
+    line = apply_color(line, gray)
+    if update_stack:
+        line = "\n" + line
+    update_stack.append(line)
+    set_context()
+    return None
+def updating_end(line):
+    del update_stack[-1]
+    set_context()
+    return None
+def external_status_start(line):
+    global context; context = apply_color(line, gray)
+    return None
+def ignore(line):
+    return None
+hide_stuff_formatting = [] + 1 * [
+    (r"^(Updating|Fetching external item into) '.+':$", updating_start),
+    (r"^(External a|A)t revision \d+\.",                updating_end),
+    (r"^Updated (external )?to revision \d+\.",         updating_end),
+    (r"^Performing status on external item at '.+':$",  external_status_start),
+    (r"^X|^    X",                                      ignore),
+    (r"^Status against revision:[ \d]+",                ignore),
+    (r"^$",                                             ignore),
+]
+
+context = None
+
+def decorate(line, formatting_list):
+    for regex, color in formatting_list:
+        if not re.search(regex, line):
+            continue
+
+        # could be a function
+        try: color.__call__
+        except AttributeError: pass
+        else: return color(line)
+
+        # could be a color
+        return apply_color(line, color)
+
     return line
 
-def decorate(line):
-    if re.search(r"^Index: |^@@|^=",   line): return color(line, "38")      # File Name          = Blue
-    if re.search(r"^-",                line): return color(line, "1")       # Removed            = Red
-    if re.search(r"^\+",               line): return color(line, "2")       # Added              = Green
-    if re.search(r"^ ?M|^ ?U",         line): return color(line, "38")      # Modified/Updated   = Blue
-    if re.search(r"^ ?C|^E",           line): return color(line, "7", "1")  # Conflicted/Existed = Red Alert
-    if re.search(r"^A",                line): return color(line, "2")       # Added              = Green
-    if re.search(r"^D",                line): return color(line, "1")       # Deleted            = Red
-    if re.search(r"^!",                line): return color(line, "7", "94") # Item Missing       = Amber Alert
-    if re.search(r"^R|^G",             line): return color(line, "5")       # Replaced or Merged = Purple
-    if re.search(r"^\?",               line): return color(line, "242")     # No Version Control = Light Grey
-    if re.search(r"^I|^X|^Performing", line): return color(line, "236")     # Ignored            = Dark Grey
-    return line
-
+commands_to_hide_stuff_from = "st status up update".split()
+status_like_commands = "add checkout co cp del export merge mkdir move mv remove rm ren sw".split() + commands_to_hide_stuff_from
 def main(args):
-    actions = "add checkout co cp del diff export merge mkdir move mv remove rm ren st sw up".split()
-    command = (args + [""])[0]
-    if command not in actions:
-        global decorate; decorate = lambda line: line
+    command = ""
+    for arg in args:
+        if not arg.startswith("-"):
+            command = arg
+            break
+    formatting_list = []
+    if command in status_like_commands:
+        formatting_list = status_formatting
+        if command in commands_to_hide_stuff_from:
+            formatting_list = hide_stuff_formatting + formatting_list
+    if command == "diff":
+        formatting_list = diff_formatting
     process = subprocess.Popen(["svn"] + args, stdout=subprocess.PIPE)
-    for line in lazy_lines(process.stdout):
-        sys.stdout.write(decorate(line.rstrip()))
-        sys.stdout.write("\n")
+    for input_line in lazy_lines(process.stdout):
+        output_line = decorate(input_line, formatting_list)
+        if output_line == None:
+            continue
+        global context
+        if context != None:
+            print(context)
+            context = None
+        print(output_line)
+    sys.exit(process.wait())
 
-main(sys.argv[1:])
+try:
+    main(sys.argv[1:])
+except KeyboardInterrupt:
+    sys.exit("")
+
