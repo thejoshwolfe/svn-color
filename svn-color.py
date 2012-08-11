@@ -84,7 +84,7 @@ def set_context():
         global context; context = update_stack[-1]
 def updating_start(line):
     line = apply_color(line, gray)
-    if update_stack:
+    if printed_anything:
         line = "\n" + line
     update_stack.append(line)
     set_context()
@@ -109,6 +109,7 @@ hide_stuff_formatting = [] + 1 * [
 ]
 
 context = None
+printed_anything = False
 
 def decorate(line, formatting_list):
     for regex, color in formatting_list:
@@ -173,6 +174,7 @@ def main(args):
             print(context)
             context = None
         print(output_line)
+        global printed_anything; printed_anything = True
     return process.wait()
 
 try:

@@ -95,7 +95,6 @@ Before:
 After:
 
     $ svn up
-    
     Fetching external item into 'external_item':
     U       external_item/new_file
 
