@@ -50,16 +50,14 @@ def make_diff_normal(color):
             return apply_color(line, color)
         return line
     return diff_normal
-diff_add = make_diff_normal(green)
-diff_delete = make_diff_normal(red)
-diff_unknown = make_diff_normal(None)
 
 diff_formatting = [
     (r"^Index: ", diff_metadata_start),
-    (r"^@@",      diff_metadata_end),
-    (r"^\+",      diff_add),
-    (r"^-",       diff_delete),
-    (r"",         diff_unknown),
+    (r"^@@|^##",  diff_metadata_end),
+    (r"^\+",      make_diff_normal(green)),
+    (r"^-",       make_diff_normal(red)),
+    (r"^\\",      make_diff_normal(amber)),
+    (r"",         make_diff_normal(None)),
 ]
 def summary_of_conflicts(line):
     # the final summary is not in any context
