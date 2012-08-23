@@ -76,6 +76,14 @@ status_formatting = [
     (r"^!",                       amber_alert), # Item Missing
 ]
 
+def color_blame_line(line):
+    matches = re.findall(r"^(\s*\d+)(\s+\S+)(.*)$", line)
+    if not matches:
+        return line
+    rev, user, text = matches[0]
+    return apply_color(rev, amber) + apply_color(user, blue) + text
+blame_formatting = [(r"", color_blame_line)]
+
 update_stack = []
 def set_context():
     if update_stack:
@@ -138,6 +146,7 @@ def contains_accept_edit(args):
 commands_that_can_use_an_external_editor = "commit ci copy cp delete del remove rm import mkdir move mv rename ren propedit pedit pe update up".split()
 commands_to_hide_stuff_from = "st status up update".split()
 status_like_commands = "add checkout co cp del export merge mkdir move mv remove rm ren sw".split() + commands_to_hide_stuff_from
+blame_commands = "blame praise annotate ann".split()
 def main(args):
     command = ""
     for arg in args:
@@ -149,8 +158,10 @@ def main(args):
         formatting_list = status_formatting
         if command in commands_to_hide_stuff_from:
             formatting_list = hide_stuff_formatting + formatting_list
-    if command == "diff":
+    elif command == "diff":
         formatting_list = diff_formatting
+    elif command in blame_commands:
+        formatting_list = blame_formatting
     subprocess_command = ["svn"] + args
     accept_edit = contains_accept_edit(args)
     if command in commands_that_can_use_an_external_editor or accept_edit:
