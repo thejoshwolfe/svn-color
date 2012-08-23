@@ -76,13 +76,16 @@ status_formatting = [
     (r"^!",                       amber_alert), # Item Missing
 ]
 
-def color_blame_line(line):
-    matches = re.findall(r"^(\s*\d+)(\s+\S+)(.*)$", line)
+def color_blame_line(line, regex):
+    matches = re.findall(regex, line)
     if not matches:
         return line
-    rev, user, text = matches[0]
-    return apply_color(rev, amber) + apply_color(user, blue) + text
-blame_formatting = [(r"", color_blame_line)]
+    rev, user, timestamp, text = matches[0]
+    return apply_color(rev, amber) + apply_color(user, blue) + apply_color(timestamp, gray) + text
+def color_blame_normal_line(line):
+    return color_blame_line(line, r"^(\s*\d+)(\s+\S+)()(.*)$")
+def color_blame_verbose_line(line):
+    return color_blame_line(line, r"^(\s*\d+)(\s+\S+)(.*?\(.*?\))(.*)$")
 
 update_stack = []
 def set_context():
@@ -161,7 +164,10 @@ def main(args):
     elif command == "diff":
         formatting_list = diff_formatting
     elif command in blame_commands:
-        formatting_list = blame_formatting
+        formatting_function = color_blame_normal_line
+        if any(arg in ("-v", "--verbose") for arg in args):
+            formatting_function = color_blame_verbose_line
+        formatting_list = [(r"", formatting_function)]
     subprocess_command = ["svn"] + args
     accept_edit = contains_accept_edit(args)
     if command in commands_that_can_use_an_external_editor or accept_edit:
