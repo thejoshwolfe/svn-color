@@ -146,7 +146,8 @@ def contains_accept_edit(args):
     try: return args[accept_index+1] in edit_names
     except IndexError: return False
 
-commands_that_can_use_an_external_editor = "commit ci copy cp delete del remove rm import mkdir move mv rename ren propedit pedit pe update up".split()
+commands_that_always_use_an_external_editor = "propedit pedit pe".split()
+commands_that_can_use_an_external_editor = "commit ci copy cp delete del remove rm import mkdir move mv rename ren update up".split() + commands_that_always_use_an_external_editor
 commands_to_hide_stuff_from = "st status up update".split()
 status_like_commands = "add checkout co cp del export merge mkdir move mv remove rm ren sw".split() + commands_to_hide_stuff_from
 blame_commands = "blame praise annotate ann".split()
@@ -173,7 +174,7 @@ def main(args):
     if command in commands_that_can_use_an_external_editor or accept_edit:
         # figuring out exactly when svn will run vim is too hard.
         # if the user doesn't explicitly ask for the editor, don't allow it.
-        if accept_edit or "--editor-cmd" in args:
+        if accept_edit or "--editor-cmd" in args or command in commands_that_always_use_an_external_editor:
             # stay out of the way
             return subprocess.call(subprocess_command)
         # no editor allowed
