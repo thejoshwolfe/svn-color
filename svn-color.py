@@ -72,6 +72,7 @@ status_formatting = [
   (r"^..L",                     amber_alert), # Locked
   (r"^Summary of conflicts:$",  summary_of_conflicts),
   (r"^E|^C|^.C|^...C|^......C", red_alert),   # Conflicted/Existed
+  (r"^Skipped .*",              red_alert),   # These are reported in the summary of conflicts
   (r"^.       \*",              amber),       # Modified Remotely
   (r"^ ?M|^ ?U",                blue),        # Modified/Updated
   (r"^A|^   A",                 green),       # Added
@@ -104,7 +105,11 @@ def updating_start(line):
   set_context()
   return None
 def updating_end(line):
-  del update_stack[-1]
+  try:
+    del update_stack[-1]
+  except IndexError:
+    # switch and checkout don't introduce the top-level-scope, but they still close it.
+    pass
   set_context()
   return None
 def external_status_start(line):
@@ -116,6 +121,7 @@ hide_stuff_formatting = [] + 1 * [
   (r"^(Updating|Fetching external item into) '.+':$", updating_start),
   (r"^(External a|A)t revision \d+\.",                updating_end),
   (r"^Updated (external )?to revision \d+\.",         updating_end),
+  (r"^Checked out (external at )?revision \d+\.",     updating_end),
   (r"^Performing status on external item at '.+':$",  external_status_start),
   (r"^X|^    X",                                      ignore),
   (r"^Status against revision:[ \d]+",                ignore),
@@ -153,10 +159,11 @@ def contains_accept_edit(args):
 
 commands_that_always_use_an_external_editor = "propedit pedit pe".split()
 commands_that_can_use_an_external_editor = "commit ci copy cp delete del remove rm import mkdir move mv rename ren update up".split() + commands_that_always_use_an_external_editor
-commands_to_hide_stuff_from = "st status up update".split()
-status_like_commands = "add checkout co cp del export merge mkdir move mv remove rm ren sw".split() + commands_to_hide_stuff_from
+commands_to_hide_stuff_from = "checkout co st status up update switch sw".split()
+status_like_commands = "add cp del export merge mkdir move mv remove rm ren".split() + commands_to_hide_stuff_from
 blame_commands = "blame praise annotate ann".split()
 def main(args):
+  # determine what svn command we're running
   command = ""
   for arg in args:
     if not arg.startswith("-"):
@@ -202,4 +209,3 @@ try:
   sys.exit(main(sys.argv[1:]))
 except KeyboardInterrupt:
   sys.exit("")
-
