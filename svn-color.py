@@ -157,8 +157,8 @@ def contains_accept_edit(args):
   try: return args[accept_index+1] in edit_names
   except IndexError: return False
 
-commands_that_always_use_an_external_editor = "propedit pedit pe".split()
-commands_that_can_use_an_external_editor = "commit ci copy cp delete del remove rm import mkdir move mv rename ren update up".split() + commands_that_always_use_an_external_editor
+commands_that_always_use_an_external_editor = "commit ci propedit pedit pe".split()
+commands_that_can_use_an_external_editor = "copy cp delete del remove rm import mkdir move mv rename ren update up".split() + commands_that_always_use_an_external_editor
 commands_to_hide_stuff_from = "checkout co st status up update switch sw".split()
 status_like_commands = "add cp del export merge mkdir move mv remove rm ren".split() + commands_to_hide_stuff_from
 blame_commands = "blame praise annotate ann".split()
