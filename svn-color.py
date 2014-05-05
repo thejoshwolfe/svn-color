@@ -45,19 +45,20 @@ def make_diff_metadata_control(is_start):
     global diff_currently_in_metadata; diff_currently_in_metadata = is_start
     return apply_color(line, diff_metadata_color)
   return diff_metadata_control
-def make_diff_normal(color):
+def make_diff_normal(color, trailing_whitespace_formatter=lambda s:s):
   def diff_normal(line):
+    line, trailing_whitespace = re.findall(r"^(.*?)(\s*)$", line)[0]
     if diff_currently_in_metadata:
-      return apply_color(line, diff_metadata_color)
-    if color:
-      return apply_color(line, color)
-    return line
+      line = apply_color(line, diff_metadata_color)
+    elif color:
+      line = apply_color(line, color)
+    return line + trailing_whitespace_formatter(trailing_whitespace)
   return diff_normal
 
 diff_formatting = [
   (r"^Index: ", make_diff_metadata_control(True)),
   (r"^@@|^##",  make_diff_metadata_control(False)),
-  (r"^\+",      make_diff_normal(green)),
+  (r"^\+",      make_diff_normal(green, red_alert)),
   (r"^-",       make_diff_normal(red)),
   (r"^\\",      make_diff_normal(amber)),
   (r"",         make_diff_normal(None)),
