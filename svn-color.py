@@ -56,12 +56,12 @@ def make_diff_normal(color, trailing_whitespace_formatter=lambda s:s):
   return diff_normal
 
 diff_formatting = [
-  (r"^Index: ", make_diff_metadata_control(True)),
-  (r"^@@|^##",  make_diff_metadata_control(False)),
-  (r"^\+",      make_diff_normal(green, red_alert)),
-  (r"^-",       make_diff_normal(red)),
-  (r"^\\",      make_diff_normal(amber)),
-  (r"",         make_diff_normal(None)),
+  (r"^Index: ", make_diff_metadata_control(True)), # metadata stat
+  (r"^@@|^##",  make_diff_metadata_control(False)), # metadata end (file or property)
+  (r"^\+",      make_diff_normal(green, red_alert)), # line added
+  (r"^-",       make_diff_normal(red)), # line removed
+  (r"^\\",      make_diff_normal(amber)), # no newline at end of something
+  (r"",         make_diff_normal(None)), # either in the middle of the metadata or the context surrounding changed lines
 ]
 def summary_of_conflicts(line):
   # the final summary is not in any context
