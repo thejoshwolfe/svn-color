@@ -45,8 +45,6 @@ def make_diff_metadata_control(is_start):
     global diff_currently_in_metadata; diff_currently_in_metadata = is_start
     return apply_color(line, diff_metadata_color)
   return diff_metadata_control
-diff_metadata_start = make_diff_metadata_control(True)
-diff_metadata_end = make_diff_metadata_control(False)
 def make_diff_normal(color):
   def diff_normal(line):
     if diff_currently_in_metadata:
@@ -57,8 +55,8 @@ def make_diff_normal(color):
   return diff_normal
 
 diff_formatting = [
-  (r"^Index: ", diff_metadata_start),
-  (r"^@@|^##",  diff_metadata_end),
+  (r"^Index: ", make_diff_metadata_control(True)),
+  (r"^@@|^##",  make_diff_metadata_control(False)),
   (r"^\+",      make_diff_normal(green)),
   (r"^-",       make_diff_normal(red)),
   (r"^\\",      make_diff_normal(amber)),
@@ -100,6 +98,7 @@ def set_context():
 def updating_start(line):
   line = apply_color(line, gray)
   if printed_anything:
+    # blank line spacing between sections
     line = "\n" + line
   update_stack.append(line)
   set_context()
@@ -117,7 +116,7 @@ def external_status_start(line):
   return None
 def ignore(line):
   return None
-hide_stuff_formatting = [] + 1 * [
+hide_stuff_formatting = [
   (r"^(Updating|Fetching external item into) '.+':$", updating_start),
   (r"^(External a|A)t revision \d+\.",                updating_end),
   (r"^Updated (external )?to revision \d+\.",         updating_end),
@@ -157,11 +156,47 @@ def contains_accept_edit(args):
   try: return args[accept_index+1] in edit_names
   except IndexError: return False
 
-commands_that_always_use_an_external_editor = "commit ci propedit pedit pe".split()
-commands_that_can_use_an_external_editor = "copy cp delete del remove rm import mkdir move mv rename ren update up".split() + commands_that_always_use_an_external_editor
-commands_to_hide_stuff_from = "checkout co st status up update switch sw".split()
-status_like_commands = "add cp del export merge mkdir move mv remove rm ren".split() + commands_to_hide_stuff_from
-blame_commands = "blame praise annotate ann".split()
+svn_add = ["add"]
+svn_blame = ["blame", "praise", "annotate", "ann"]
+svn_cat = ["cat"]
+svn_changelist = ["changelist", "cl"]
+svn_checkout = ["checkout", "co"]
+svn_cleanup = ["cleanup"]
+svn_commit = ["commit", "ci"]
+svn_copy = ["copy", "cp"]
+svn_delete = ["delete", "del", "remove", "rm"]
+svn_diff = ["diff", "di"]
+svn_export = ["export"]
+svn_help = ["help", "?", "h"]
+svn_import = ["import"]
+svn_info = ["info"]
+svn_list = ["list", "ls"]
+svn_lock = ["lock"]
+svn_log = ["log"]
+svn_merge = ["merge"]
+svn_mergeinfo = ["mergeinfo"]
+svn_mkdir = ["mkdir"]
+svn_move = ["move", "mv", "rename", "ren"]
+svn_patch = ["patch"]
+svn_propdel = ["propdel", "pdel", "pd"]
+svn_propedit = ["propedit", "pedit", "pe"]
+svn_propget = ["propget", "pget", "pg"]
+svn_proplist = ["proplist", "plist", "pl"]
+svn_propset = ["propset", "pset", "ps"]
+svn_relocate = ["relocate"]
+svn_resolve = ["resolve"]
+svn_resolved = ["resolved"]
+svn_revert = ["revert"]
+svn_status = ["status", "stat", "st"]
+svn_switch = ["switch", "sw"]
+svn_unlock = ["unlock"]
+svn_update = ["update", "up"]
+svn_upgrade = ["upgrade"]
+
+commands_that_always_use_an_external_editor = svn_commit + svn_propedit
+commands_that_can_use_an_external_editor = commands_that_always_use_an_external_editor + svn_copy + svn_delete + svn_import + svn_mkdir + svn_move + svn_update
+commands_to_hide_stuff_from = svn_checkout + svn_status + svn_update + svn_switch
+status_like_commands = commands_to_hide_stuff_from + svn_add + svn_copy + svn_delete + svn_export + svn_merge + svn_mkdir + svn_move
 def main(args):
   # determine what svn command we're running
   command = ""
@@ -176,7 +211,7 @@ def main(args):
       formatting_list = hide_stuff_formatting + formatting_list
   elif command == "diff":
     formatting_list = diff_formatting
-  elif command in blame_commands:
+  elif command in svn_blame:
     formatting_function = color_blame_normal_line
     if any(arg in ("-v", "--verbose") for arg in args):
       formatting_function = color_blame_verbose_line
