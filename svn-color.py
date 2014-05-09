@@ -199,6 +199,11 @@ commands_that_can_use_an_external_editor = commands_that_always_use_an_external_
 commands_to_hide_stuff_from = svn_checkout + svn_status + svn_update + svn_switch
 status_like_commands = commands_to_hide_stuff_from + svn_add + svn_copy + svn_delete + svn_export + svn_merge + svn_mkdir + svn_move
 def main(args):
+  # are we in test mode?
+  try: args.remove("--__test__")
+  except ValueError: test_mode = False
+  else: test_mode = True
+
   # determine what svn command we're running
   command = ""
   for arg in args:
@@ -217,6 +222,8 @@ def main(args):
     if any(arg in ("-v", "--verbose") for arg in args):
       formatting_function = color_blame_verbose_line
     formatting_list = [(r"", formatting_function)]
+
+  hands_on = True
   subprocess_command = ["svn"] + args
   accept_edit = contains_accept_edit(args)
   if command in commands_that_can_use_an_external_editor or accept_edit:
@@ -224,22 +231,36 @@ def main(args):
     # if the user doesn't explicitly ask for the editor, don't allow it.
     if accept_edit or "--editor-cmd" in args or command in commands_that_always_use_an_external_editor:
       # stay out of the way
-      return subprocess.call(subprocess_command)
-    # no editor allowed
-    subprocess_command.append("--non-interactive")
+      hands_on = False
+    else:
+      # no editor allowed
+      subprocess_command.append("--non-interactive")
 
-  process = subprocess.Popen(subprocess_command, stdout=subprocess.PIPE)
-  for input_line in read_lines(process.stdout):
-    output_line = decorate(input_line, formatting_list)
-    if output_line == None:
-      continue
-    global context
-    if context != None:
-      print(context)
-      context = None
-    print(output_line)
-    global printed_anything; printed_anything = True
-  return process.wait()
+  if not hands_on:
+    if test_mode:
+      sys.stdout.write(sys.stdin.read())
+    else:
+      return subprocess.call(subprocess_command)
+  else:
+    if test_mode:
+      input_lines = sys.stdin.read().split("\n")
+      get_return_code = lambda: 0
+    else:
+      process = subprocess.Popen(subprocess_command, stdout=subprocess.PIPE)
+      input_lines = read_lines(process.stdout)
+      get_return_code = process.wait
+
+    for input_line in input_lines:
+      output_line = decorate(input_line, formatting_list)
+      if output_line == None:
+        continue
+      global context
+      if context != None:
+        print(context)
+        context = None
+      print(output_line)
+      global printed_anything; printed_anything = True
+    return get_return_code()
 
 try:
   sys.exit(main(sys.argv[1:]))
