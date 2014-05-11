@@ -128,6 +128,22 @@ hide_stuff_formatting = [
   (r"^$",                                             ignore),
 ]
 
+class LogFormattingFunction:
+  def __init__(self, has_diff, has_verbose):
+    # switch between multiple syntaxes highlighting schemes
+    log_bar_formatting = [
+      (r"^" + "-"*72 + "$", make_state_setter(asdf, gray)),
+    ]
+    log_header_regex = r"^r\d+ \| .* \| .* \| (\d+) lines?$"
+    def log_header_formatting_function(line):
+      line_count = int(re.match(line).group(1))
+    log_header_formatting = [
+      (log_header_regex, log_header_formatting_function),
+    ]
+    formatting_list = [log_bar_formatting]
+  def __call__(self, line):
+    return line
+
 context = None
 printed_anything = False
 
@@ -210,18 +226,24 @@ def main(args):
     if not arg.startswith("-"):
       command = arg
       break
-  formatting_list = []
+
+  has_verbose = any(arg in ("-v", "--verbose") for arg in args)
   if command in status_like_commands:
     formatting_list = status_formatting
-    if command in commands_to_hide_stuff_from:
-      formatting_list = hide_stuff_formatting + formatting_list
+  elif command in commands_to_hide_stuff_from:
+    formatting_list = hide_stuff_formatting + status_formatting
   elif command == "diff":
     formatting_list = diff_formatting
   elif command in svn_blame:
     formatting_function = color_blame_normal_line
-    if any(arg in ("-v", "--verbose") for arg in args):
+    if has_verbose:
       formatting_function = color_blame_verbose_line
     formatting_list = [(r"", formatting_function)]
+  elif command in svn_log:
+    has_diff = args.count("--diff") > 0
+    formatting_list = [(r"", LogFormattingFunction(has_diff, has_verbose))]
+  else:
+    formatting_list = []
 
   hands_on = True
   subprocess_command = ["svn"] + args
