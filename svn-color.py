@@ -22,6 +22,7 @@ def read_lines(stream):
 
 red         = "1"
 green       = "2"
+yellow      = "3"
 purple      = "5"
 white       = "7"
 blue        = "38"
@@ -128,21 +129,50 @@ hide_stuff_formatting = [
   (r"^$",                                             ignore),
 ]
 
+log_header_regex = r"^r\d+ \| .* \| .* \| (\d+) lines?$"
 class LogFormattingFunction:
+  """switch between multiple syntaxes highlighting schemes"""
   def __init__(self, has_diff, has_verbose):
-    # switch between multiple syntaxes highlighting schemes
-    log_bar_formatting = [
-      (r"^" + "-"*72 + "$", make_state_setter(asdf, gray)),
-    ]
-    log_header_regex = r"^r\d+ \| .* \| .* \| (\d+) lines?$"
-    def log_header_formatting_function(line):
-      line_count = int(re.match(line).group(1))
-    log_header_formatting = [
-      (log_header_regex, log_header_formatting_function),
-    ]
-    formatting_list = [log_bar_formatting]
-  def __call__(self, line):
+    self.has_diff = has_diff
+    self.has_verbose = has_verbose
+
+    self.log_bar_formatting = [(r"^" + "-"*72 + "$", self.log_bar_formatting_function)]
+    self.log_header_formatting = [(log_header_regex, self.log_header_formatting_function)]
+    self.begin_log_message_formatting = [(r"^$", self.begin_log_message)]
+    self.changed_paths_formatting = [
+      (r"^Changed paths:$", gray),
+      (r"^   M", blue),
+      (r"^   A", green),
+      (r"^   D", red),
+      # a blank line ends the change paths
+    ] + self.begin_log_message_formatting
+
+    self.formatting_list = self.log_bar_formatting
+  def log_bar_formatting_function(self, line):
+    self.formatting_list = self.log_header_formatting
+    return apply_color(line, yellow)
+  def log_header_formatting_function(self, line):
+    self.log_message_lines_remaining = int(re.match(log_header_regex, line).group(1))
+    if self.has_verbose:
+      # the verbose section comes first, and is terminated by a blank line
+      self.formatting_list = self.changed_paths_formatting
+    else:
+      # first we get a blank line, then the message
+      self.formatting_list = self.begin_log_message_formatting
+    return apply_color(line, yellow)
+  def begin_log_message(self, line):
+    self.formatting_list = [(r"", self.log_message_formatting_function)]
     return line
+  def log_message_formatting_function(self, line):
+    self.log_message_lines_remaining -= 1
+    if self.log_message_lines_remaining == 0:
+      if self.has_diff:
+        self.formatting_list = self.log_bar_formatting + diff_formatting
+      else:
+        self.formatting_list = self.log_bar_formatting
+    return line
+  def __call__(self, line):
+    return decorate(line, self.formatting_list)
 
 context = None
 printed_anything = False
@@ -228,16 +258,17 @@ def main(args):
       break
 
   has_verbose = any(arg in ("-v", "--verbose") for arg in args)
-  if command in status_like_commands:
-    formatting_list = status_formatting
-  elif command in commands_to_hide_stuff_from:
+  if command in commands_to_hide_stuff_from:
     formatting_list = hide_stuff_formatting + status_formatting
+  elif command in status_like_commands:
+    formatting_list = status_formatting
   elif command == "diff":
     formatting_list = diff_formatting
   elif command in svn_blame:
-    formatting_function = color_blame_normal_line
     if has_verbose:
       formatting_function = color_blame_verbose_line
+    else:
+      formatting_function = color_blame_normal_line
     formatting_list = [(r"", formatting_function)]
   elif command in svn_log:
     has_diff = args.count("--diff") > 0
@@ -260,6 +291,7 @@ def main(args):
 
   if not hands_on:
     if test_mode:
+      # testing hands-off mode is kinda silly, but whatever.
       sys.stdout.write(sys.stdin.read())
     else:
       return subprocess.call(subprocess_command)
