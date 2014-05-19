@@ -136,6 +136,8 @@ class LogFormattingFunction:
     self.has_diff = has_diff
     self.has_verbose = has_verbose
 
+    self.is_first_log_bar = True
+
     self.log_bar_formatting = [(r"^" + "-"*72 + "$", self.log_bar_formatting_function)]
     self.log_header_formatting = [(log_header_regex, self.log_header_formatting_function)]
     self.begin_log_message_formatting = [(r"^$", self.begin_log_message)]
@@ -150,6 +152,10 @@ class LogFormattingFunction:
     self.formatting_list = self.log_bar_formatting
   def log_bar_formatting_function(self, line):
     self.formatting_list = self.log_header_formatting
+    # omit the first bar in the log
+    if self.is_first_log_bar:
+      self.is_first_log_bar = False
+      return None
     return apply_color(line, yellow)
   def log_header_formatting_function(self, line):
     self.log_message_lines_remaining = int(re.match(log_header_regex, line).group(1))
@@ -159,10 +165,12 @@ class LogFormattingFunction:
     else:
       # first we get a blank line, then the message
       self.formatting_list = self.begin_log_message_formatting
-    return apply_color(line, yellow)
+    # add spacing between log messages
+    return "\n" + apply_color(line, yellow)
   def begin_log_message(self, line):
     self.formatting_list = [(r"", self.log_message_formatting_function)]
-    return line
+    # omit the blank line before the message
+    return None
   def log_message_formatting_function(self, line):
     self.log_message_lines_remaining -= 1
     if self.log_message_lines_remaining == 0:
