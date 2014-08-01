@@ -41,10 +41,10 @@ def apply_color(text, foreground=None, background=None):
 
 diff_metadata_color = blue
 diff_currently_in_metadata = False
-def make_diff_metadata_control(is_start):
+def make_diff_metadata_control(is_start, color=diff_metadata_color):
   def diff_metadata_control(line):
     global diff_currently_in_metadata; diff_currently_in_metadata = is_start
-    return apply_color(line, diff_metadata_color)
+    return apply_color(line, color)
   return diff_metadata_control
 def make_diff_normal(color, trailing_whitespace_formatter=lambda s:s):
   def diff_normal(line):
@@ -57,12 +57,14 @@ def make_diff_normal(color, trailing_whitespace_formatter=lambda s:s):
   return diff_normal
 
 diff_formatting = [
-  (r"^Index: ", make_diff_metadata_control(True)), # metadata stat
-  (r"^@@|^##",  make_diff_metadata_control(False)), # metadata end (file or property)
-  (r"^\+",      make_diff_normal(green, red_alert)), # line added
-  (r"^-",       make_diff_normal(red)), # line removed
-  (r"^\\",      make_diff_normal(amber)), # no newline at end of something
-  (r"",         make_diff_normal(None)), # either in the middle of the metadata or the context surrounding changed lines
+  (r"^Index: ",          make_diff_metadata_control(True)), # metadata stat
+  (r"^@@|^##",           make_diff_metadata_control(False)), # metadata end (file or property)
+  (r"^Cannot display: ", make_diff_metadata_control(True, purple)), # binary file
+  (r"^svn:mime-type = ", make_diff_metadata_control(False, purple)), # binary file
+  (r"^\+",               make_diff_normal(green, red_alert)), # line added
+  (r"^-",                make_diff_normal(red)), # line removed
+  (r"^\\",               make_diff_normal(amber)), # no newline at end of something
+  (r"",                  make_diff_normal(None)), # either in the middle of the metadata or the context surrounding changed lines
 ]
 def summary_of_conflicts(line):
   # the final summary is not in any context
