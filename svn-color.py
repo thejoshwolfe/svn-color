@@ -71,8 +71,10 @@ def summary_of_conflicts(line):
   global context; context = None
   return red_alert(line)
 status_formatting = [
-  (r"^..L",                     amber_alert), # Locked
   (r"^Summary of conflicts:$",  summary_of_conflicts),
+  (r"^svn: warning: W",         amber_alert), # Warning
+  (r"^svn: E",                  red_alert),   # Error
+  (r"^..L",                     amber_alert), # Locked
   (r"^E|^C|^.C|^...C|^......C", red_alert),   # Conflicted/Existed
   (r"^Skipped .*",              red_alert),   # These are reported in the summary of conflicts
   (r"^.       \*",              amber),       # Modified Remotely
@@ -310,7 +312,7 @@ def main(args):
       input_lines = sys.stdin.read().split("\n")
       get_return_code = lambda: 0
     else:
-      process = subprocess.Popen(subprocess_command, stdout=subprocess.PIPE)
+      process = subprocess.Popen(subprocess_command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
       input_lines = read_lines(process.stdout)
       get_return_code = process.wait
 
