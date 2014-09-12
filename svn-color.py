@@ -150,6 +150,7 @@ class LogFormattingFunction:
       (r"^   M", blue),
       (r"^   A", green),
       (r"^   D", red),
+      (r"^   R", purple),
       # a blank line ends the change paths
     ] + self.begin_log_message_formatting
 
