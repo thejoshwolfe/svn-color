@@ -77,7 +77,8 @@ status_formatting = [
   (r"^..L",                     amber_alert), # Locked
   (r"^E|^C|^.C|^...C|^......C", red_alert),   # Conflicted/Existed
   (r"^Skipped .*",              red_alert),   # These are reported in the summary of conflicts
-  (r"^.       \*",              amber),       # Modified Remotely
+  (r"^        \*",              amber),       # Modified Remotely (and not locally)
+  (r"^..      \*",              purple),      # Modified Remotely and locally
   (r"^ ?M|^ ?U",                blue),        # Modified/Updated
   (r"^A|^   A",                 green),       # Added
   (r"^D|Removed external '.+'", red),         # Deleted
